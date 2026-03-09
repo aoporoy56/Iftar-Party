@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Iftar Collection</title>
+<title>Iftar Collection - Live Dashboard</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ body{
 }
 
 .container{
-    max-width:700px;
+    max-width:800px;
     margin:auto;
     background:white;
     padding:25px;
@@ -24,13 +24,19 @@ h2{
     text-align:center;
 }
 
-/* Flex container for totals on top of table */
 .totals-top{
     display:flex;
     justify-content:space-between;
+    align-items:center;
     font-weight:bold;
     font-size:16px;
     margin-bottom:10px;
+}
+
+#last-updated{
+    font-weight:normal;
+    font-size:12px;
+    color:#555;
 }
 
 table{
@@ -64,6 +70,13 @@ th{
     border-radius:6px;
     font-weight:bold;
 }
+
+.visitor-count{
+    font-size:14px;
+    font-weight:bold;
+    color:#333;
+    margin-top:5px;
+}
 </style>
 </head>
 
@@ -71,12 +84,16 @@ th{
 
 <div class="container">
 
-<h2>Iftar Party Collection</h2>
+<h2>Iftar Party Collection - Live Dashboard</h2>
 
-<!-- Totals on top -->
+<!-- Totals and Visitor -->
 <div class="totals-top">
     <div>Total Members: <span id="total-members">0</span></div>
+    <div id="last-updated">Last Updated: --:--:--</div>
     <div>Total Collected: <span id="total">0</span></div>
+</div>
+<div class="visitor-count">
+    Visitors Online: <span id="visitor-count">0</span>
 </div>
 
 <table>
@@ -97,54 +114,89 @@ th{
 const sheetID = "1rZ7F0m4LrOnVYrt2dJ_uYV6ZhElXeh8dal4xzAs7X2o";
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-fetch(url)
-.then(res => res.text())
-.then(data => {
-    const json = JSON.parse(data.substr(47).slice(0,-2));
-    const rows = json.table.rows;
+const counterAPI = "https://api.counterapi.dev/v2/iftar-dashboard/iftar-dashboard";
+const apiToken = "ut_W7ixEPKmdlCaPLC9YTqpdkBXUQzZdtPoHeng1UPg";
 
-    const tbody = document.getElementById("table-body");
-    let total = 0;
-    let memberCount = 0;
+// Load Google Sheet data
+function loadTable() {
+    fetch(url)
+    .then(res => res.text())
+    .then(data => {
+        const json = JSON.parse(data.substr(47).slice(0,-2));
+        const rows = json.table.rows;
 
-    rows.forEach(r => {
-        const name = r.c[0]?.v || "";
-        const amountCell = r.c[1];
-        const paid = r.c[2]?.v;
+        const tbody = document.getElementById("table-body");
+        tbody.innerHTML = ""; // Clear table
 
-        if(!name) return;
+        let total = 0;
+        let memberCount = 0;
 
-        memberCount++;
+        rows.forEach(r => {
+            const name = r.c[0]?.v || "";
+            const amountCell = r.c[1];
+            const paid = r.c[2]?.v;
 
-        let amount = 0;
-        if(amountCell){
-            if(amountCell.v != null && !isNaN(amountCell.v)){
-                amount = parseFloat(amountCell.v);
-            } else if(amountCell.f){
-                amount = parseFloat(amountCell.f.toString().replace(/,/g,'').trim()) || 0;
+            if(!name) return;
+
+            memberCount++;
+
+            let amount = 0;
+            if(amountCell){
+                if(amountCell.v != null && !isNaN(amountCell.v)){
+                    amount = parseFloat(amountCell.v);
+                } else if(amountCell.f){
+                    amount = parseFloat(amountCell.f.toString().replace(/,/g,'').trim()) || 0;
+                }
             }
+
+            if(paid) total += amount;
+
+            const statusText = paid ? "Confirmed" : "Processing";
+            const statusClass = paid ? "status-confirmed" : "status-processing";
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td>${amount.toLocaleString()}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById("total").textContent = total.toLocaleString();
+        document.getElementById("total-members").textContent = memberCount;
+
+        const now = new Date();
+        document.getElementById("last-updated").textContent = "Last Updated: " + now.toLocaleTimeString();
+    })
+    .catch(err => console.error("Error fetching Google Sheet:", err));
+}
+
+// Increment visitor counter and get current value
+function updateVisitorCount() {
+    fetch(counterAPI + "/up", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + apiToken,
+            "Content-Type": "application/json"
         }
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("visitor-count").textContent = data.value;
+    })
+    .catch(err => console.error("Error updating visitor count:", err));
+}
 
-        if(paid){
-            total += amount;
-        }
+// Initial load
+loadTable();
+updateVisitorCount();
 
-        const statusText = paid ? "Confirmed" : "Processing";
-        const statusClass = paid ? "status-confirmed" : "status-processing";
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${name}</td>
-            <td>${amount.toLocaleString()}</td>
-            <td><span class="${statusClass}">${statusText}</span></td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    document.getElementById("total").textContent = total.toLocaleString();
-    document.getElementById("total-members").textContent = memberCount;
-})
-.catch(err => console.error("Error fetching Google Sheet:", err));
+// Auto-refresh every 10 seconds
+setInterval(() => {
+    loadTable();
+    updateVisitorCount();
+}, 10000);
 </script>
 
 </body>
