@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Iftar Collection</title>
+
+<style>
+body{
+    font-family:Arial;
+    background:#f4f6f8;
+    padding:40px;
+}
+
+.container{
+    max-width:700px;
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 5px 12px rgba(0,0,0,0.1);
+}
+
+h2{
+    text-align:center;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th,td{
+    padding:12px;
+    border-bottom:1px solid #ddd;
+    text-align:center;
+}
+
+th{
+    background:#ffca2c;
+}
+
+.status-confirmed{
+    background:#d4edda;
+    color:#155724;
+    padding:6px 12px;
+    border-radius:6px;
+    font-weight:bold;
+}
+
+.status-processing{
+    background:#fff3cd;
+    color:#856404;
+    padding:6px 12px;
+    border-radius:6px;
+    font-weight:bold;
+}
+
+.total{
+    margin-top:20px;
+    font-weight:bold;
+    font-size:18px;
+    text-align:right;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Iftar Party Collection</h2>
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Amount</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody id="table-body"></tbody>
+</table>
+
+<div class="total">
+Total Collected: <span id="total">0</span>
+</div>
+
+</div>
+
+<script>
+const sheetID = "1rZ7F0m4LrOnVYrt2dJ_uYV6ZhElXeh8dal4xzAs7X2o";
+const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
+
+fetch(url)
+.then(res => res.text())
+.then(data => {
+
+    let json = JSON.parse(data.substr(47).slice(0,-2));
+    let rows = json.table.rows;
+
+    let tbody = document.getElementById("table-body");
+    let total = 0;
+
+    rows.forEach(r => {
+
+        let name = r.c[0]?.v || "";
+        let amountCell = r.c[1];
+        let paid = r.c[2]?.v;
+
+        if(!name) return;
+
+        // Handle amount safely: either formatted string (f) or raw value (v)
+        let amount = 0;
+        if(amountCell){
+            if(amountCell.v != null){
+                amount = parseFloat(amountCell.v.toString().replace(/,/g,'').trim()) || 0;
+            } else if(amountCell.f){
+                amount = parseFloat(amountCell.f.toString().replace(/,/g,'').trim()) || 0;
+            }
+        }
+
+        let statusText = paid ? "Confirmed" : "Processing";
+        let statusClass = paid ? "status-confirmed" : "status-processing";
+
+        if(paid){
+            total += amount;
+        }
+
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${name}</td>
+            <td>${amount.toLocaleString()}</td>
+            <td><span class="${statusClass}">${statusText}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("total").textContent = total.toLocaleString();
+});
+</script>
+
+</body>
+</html>
