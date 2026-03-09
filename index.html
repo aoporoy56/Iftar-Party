@@ -6,63 +6,85 @@
 
 <style>
 body{
-    font-family:Arial;
-    background:#f4f6f8;
-    padding:40px;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    padding: 40px;
 }
 
 .container{
-    max-width:700px;
-    margin:auto;
-    background:white;
-    padding:25px;
-    border-radius:10px;
-    box-shadow:0 5px 12px rgba(0,0,0,0.1);
+    max-width: 700px;
+    margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.1);
 }
 
 h2{
-    text-align:center;
+    text-align: center;
 }
 
 /* Flex container for totals on top of table */
 .totals-top{
-    display:flex;
-    justify-content:space-between;
-    font-weight:bold;
-    font-size:16px;
-    margin-bottom:10px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 15px;
 }
 
+.totals-top div{
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+    border-radius: 6px;
+}
+
+.totals-top div:first-child{
+    text-align: left;
+}
+
+.totals-top div:last-child{
+    text-align: right;
+}
+
+/* Optional: colored box for confirmed members */
+.confirmed-box{
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Table styling */
 table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:10px;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
 }
 
-th,td{
-    padding:12px;
-    border-bottom:1px solid #ddd;
-    text-align:center;
+th, td{
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
 }
 
 th{
-    background:#ffca2c;
+    background: #ffca2c;
 }
 
 .status-confirmed{
-    background:#d4edda;
-    color:#155724;
-    padding:6px 12px;
-    border-radius:6px;
-    font-weight:bold;
+    background: #d4edda;
+    color: #155724;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: bold;
 }
 
 .status-processing{
-    background:#fff3cd;
-    color:#856404;
-    padding:6px 12px;
-    border-radius:6px;
-    font-weight:bold;
+    background: #fff3cd;
+    color: #856404;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -76,6 +98,7 @@ th{
 <!-- Totals on top -->
 <div class="totals-top">
     <div>Total Members: <span id="total-members">0</span></div>
+    <div class="confirmed-box">Confirmed Members: <span id="confirmed-members">0</span></div>
     <div>Total Collected: <span id="total">0</span></div>
 </div>
 
@@ -97,7 +120,6 @@ th{
 const sheetID = "1rZ7F0m4LrOnVYrt2dJ_uYV6ZhElXeh8dal4xzAs7X2o";
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-// Function to fetch and render the table
 function loadTable() {
     fetch(url)
     .then(res => res.text())
@@ -110,6 +132,7 @@ function loadTable() {
 
         let total = 0;
         let memberCount = 0;
+        let confirmedMemberCount = 0;
 
         rows.forEach(r => {
             const name = r.c[0]?.v || "";
@@ -131,6 +154,7 @@ function loadTable() {
 
             if(paid){
                 total += amount;
+                confirmedMemberCount++;
             }
 
             const statusText = paid ? "Confirmed" : "Processing";
@@ -148,6 +172,7 @@ function loadTable() {
         // Update totals
         document.getElementById("total").textContent = total.toLocaleString();
         document.getElementById("total-members").textContent = memberCount;
+        document.getElementById("confirmed-members").textContent = confirmedMemberCount;
     })
     .catch(err => console.error("Error fetching Google Sheet:", err));
 }
@@ -155,7 +180,7 @@ function loadTable() {
 // Initial load
 loadTable();
 
-// Auto-refresh every 10 seconds (watching)
+// Auto-refresh every 10 seconds
 setInterval(loadTable, 10000);
 </script>
 
